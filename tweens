@@ -1,0 +1,397 @@
+extends Area2D
+
+
+
+
+onready var SliceTween = $SliceTween
+
+const textures = [
+	"res://assets/Fruits/fruit1.png",
+	"res://assets/Fruits/fruit2.png",
+	"res://assets/Fruits/fruit3.png",
+	"res://assets/Fruits/fruit4.png",
+	"res://assets/Fruits/fruit5.png",
+	"res://assets/Fruits/fruit6.png",
+	"res://assets/Fruits/fruit7.png",
+	"res://assets/Fruits/fruit8.png",
+	"res://assets/Fruits/fruit9.png"
+]
+
+
+# Called when the node enters the scene tree for the first time.
+func _ready():
+	$Sprite.set_texture(
+		load(
+			textures[ rand_range(0, (textures.size() - 1 )) ]
+		)
+	)
+	register_animation()
+#	Tween.interpolate_property(
+#			$Sprite,
+#			"scale",
+#			$Sprite.get_scale(),
+#			Vector2(1.2, 1.2),
+#			5,
+#			Tween.TRANS_QUAD,
+#			Tween.EASE_OUT
+#	)
+#	Tween.interpolate_property(
+#			$Sprite,
+#			"modulate",
+#			Color(
+#				$Sprite.modulate.r,
+#				$Sprite.modulate.g,
+#				$Sprite.modulate.b,
+#				$Sprite.modulate.a
+#			),
+#			Color(
+#				$Sprite.modulate.r,
+#				$Sprite.modulate.g,
+#				$Sprite.modulate.b,
+#				0
+#			),
+#			5,
+#			Tween.TRANS_QUAD,
+#			Tween.EASE_OUT
+#	)
+#	Tween.interpolate_method(
+#		self,
+#		"_interpolationTester",
+#		0,
+#		50,
+#		1.5,
+#		Tween.EASE_IN,
+#		Tween.EASE_OUT,
+#		0
+#	)
+#	Tween.set_repeat(true)
+#	Tween.start()
+
+
+
+func rotate_me():
+	pass
+#	SliceTween.interpolate_property(
+#			$Sprite,
+#			"scale",
+#			$Sprite.get_scale(),
+#			Vector2(1.2, 1.2),
+#			5,
+#			Tween.TRANS_QUAD,
+#			Tween.EASE_OUT
+#	)
+#	SliceTween.interpolate_property(
+#			$Sprite,
+#			"rotation_degrees",
+#			0,
+#			360,
+#			5,
+#			Tween.TRANS_QUAD,
+#			Tween.EASE_OUT
+#	)
+#	SliceTween.interpolate_property(
+#			$Sprite,
+#			"modulate",
+#			Color(
+#				$Sprite.modulate.r,
+#				$Sprite.modulate.g,
+#				$Sprite.modulate.b,
+#				$Sprite.modulate.a
+#			),
+#			Color(
+#				$Sprite.modulate.r,
+#				$Sprite.modulate.g,
+#				$Sprite.modulate.b,
+#				0
+#			),
+#			5,
+#			Tween.TRANS_QUAD,
+#			Tween.EASE_OUT
+#	)
+##	SliceTween.interpolate_method(
+##		self,
+##		"_interpolationTester",
+##		0,
+##		50,
+##		1.5,
+##		Tween.EASE_IN,
+##		Tween.EASE_OUT,
+##		0
+##	)
+#	SliceTween.set_repeat(true)
+#	SliceTween.start()
+#
+
+
+func _interpolationTester(val: int)-> void:
+	print("now on ", val)
+
+func _on_FruitSM_area_entered(area):
+	pass
+	if area.is_in_group("KNIVES"):
+		EventManager.fruit_hit_event()
+		$CPUParticles2D.texture = $Sprite.texture
+		$CPUParticles2D.emitting = true
+		
+		# disable collision shapes
+		$CollisionShape2D.disabled = true
+		
+		
+		SliceTween.start()
+#		yield(
+#			get_tree().create_timer(.3, false),
+#			"timeout"
+#		)
+#		$Sprite.visible = false
+#		yield(
+#			get_tree().create_timer(.3, false),
+#			"timeout"
+#		)
+#		queue_free()
+
+
+func register_animation():
+	SliceTween.interpolate_property(
+			$Sprite,
+			"scale",
+			$Sprite.get_scale(),
+			Vector2(0, 0),
+			.5,
+			Tween.TRANS_QUAD,
+			Tween.EASE_OUT
+	)
+
+func _on_Tween_tween_all_completed():
+	print("tween done, queue_free")
+	queue_free()
+
+
+
+
+
+extends Area2D
+
+
+onready var BounceTween = $BounceTween
+onready var SpriteButton = $TouchScreenButton
+
+var is_paused = false
+var is_in_flight: bool = false
+
+var SPEED: float = 2000
+var initial_position: Vector2 = Vector2.ZERO
+var initial_button_position: Vector2 = Vector2.ZERO
+
+
+
+
+# Called when the node enters the scene tree for the first time.
+func _ready():
+	position_knife()
+	initial_position = position
+	initial_button_position = SpriteButton.position
+	bounce()
+#	$AnimationPlayer.play("bounce")
+
+
+func position_knife():	
+	var screen_size: Vector2 = get_viewport().size
+	position.x = screen_size.x/2
+	position.y = screen_size.y - ( screen_size.y / 10 )
+	
+	
+	
+func _physics_process(delta):
+	if !is_in_flight and !BounceTween.is_active():
+		print("play")
+		BounceTween.start()
+		
+	if is_paused:
+		return
+		
+	if !is_in_flight and Input.is_action_just_pressed("ui_up"):
+		initiate_flight()
+
+	if !is_in_flight and !Input.is_action_just_pressed("ui_up"):
+		return
+	
+	
+	position.y -= SPEED * delta
+
+
+
+
+func _on_TouchScreenButton_pressed():
+	print("pressed knife")
+	if is_in_flight:
+		return
+		
+	initiate_flight()
+
+
+
+func initiate_flight():
+	BounceTween.stop_all()
+	is_in_flight = true
+	# signal that we are in flight
+	EventManager.knife_flight_started_event()
+
+
+
+func bounce():
+#	BounceTween.interpolate_property(
+#			SpriteButton,
+#			"rotation_degrees",
+#			0,
+#			360,
+#			5,
+#			Tween.TRANS_QUAD,
+#			Tween.EASE_OUT
+#	)
+#	BounceTween.interpolate_property(
+#		self,
+#		"position",
+#		position,
+#		Vector2(
+#			position.x, 
+#			position.y + 10 
+#		),
+#		1,
+#		Tween.EASE_IN,
+#		Tween.EASE_IN_OUT
+#	)
+	BounceTween.interpolate_property(
+		self,
+		"position",
+		Vector2(
+			position.x, 
+			position.y + 10 
+		),
+		initial_position,
+		10,
+		Tween.EASE_IN,
+		Tween.EASE_IN_OUT
+	)
+#	BounceTween.interpolate_property(
+#		self,
+#		"position",
+#		position,
+#		Vector2( 
+#			position.x, 
+#			position.y + 40 
+#		),
+#		2,
+#		Tween.EASE_IN,
+#		Tween.EASE_OUT
+#	)
+#	BounceTween.interpolate_property(
+#			self,
+#			"modulate",
+#			Color(
+#				modulate.r,
+#				modulate.g,
+#				modulate.b,
+#				modulate.a
+#			),
+#			Color(
+#				modulate.r,
+#				modulate.g,
+#				modulate.b,
+#				0
+#			),
+#			5,
+#			Tween.TRANS_QUAD,
+#			Tween.EASE_OUT
+#	)
+#	BounceTween.interpolate_method(
+#		self,
+#		"_interpolatePosition",
+#		initial_position,
+#		Vector2(
+#			position.x, 
+#			position.y + 10 
+#		),
+#		1.5,
+#		Tween.EASE_IN,
+#		Tween.EASE_OUT,
+#		0
+#	)
+#	BounceTween.interpolate_method(
+#		self,
+#		"_interpolatePosition",
+#		Vector2(
+#			position.x, 
+#			position.y + 10 
+#		),
+#		initial_position,
+#		1.5,
+#		Tween.EASE_IN,
+#		Tween.EASE_OUT,
+#		0
+#	)
+	BounceTween.set_repeat(true)
+#	BounceTween.start()
+	
+#	Button.position = Vector2(20, 100)
+#	pass
+#	BounceTween.interpolate_property(
+#		SpriteButton, 
+#		"scale", 
+#		Vector2( 1, 1 ),  
+#		Vector2( 2, 2 ), 
+#		1, 
+#		Tween.TRANS_BOUNCE, 
+#		Tween.TRANS_BOUNCE,
+#		0
+#	)
+#	BounceTween.interpolate_property(
+#		SpriteButton, 
+#		"rotation_degrees", 
+#		0,  
+#		360, 
+#		1.5, 
+#		Tween.TRANS_BOUNCE, 
+#		Tween.TRANS_BOUNCE,
+#		0
+#	)
+#	BounceTween.start()
+#	Tween.interpolate_property(
+#		Button, 
+#		"position", 
+#		initial_button_location, 
+#		Vector2(
+#			initial_button_location.x,
+#			initial_button_location.y - 2000
+#		), 
+#		2, 
+#		Tween.TRANS_BOUNCE, 
+#		Tween.TRANS_BOUNCE
+#	)
+#	Tween.start()
+
+#	Tween.interpolate_property(
+#		self, 
+#		"position.y",
+#		position.y,
+#		position.y - 400,
+#		10,
+#		Tween.TRANS_BOUNCE
+#	)
+#	Tween.start()
+
+
+#func _interpolatePosition(pos):
+#	print("set pos")
+#	position = pos
+
+func _on_VisibilityNotifier2D_screen_exited():
+	print("OOOPS, OUTSIDE SCREEN")
+	is_in_flight = false
+	
+	is_paused = true
+	yield( get_tree().create_timer(.3, false), "timeout" )
+	is_paused = false
+	
+	position = initial_position
+	# signal that flight just ended
+	EventManager.knife_flight_ended_event()
